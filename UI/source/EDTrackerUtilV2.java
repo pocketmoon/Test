@@ -31,8 +31,6 @@ String  infoString = "EDTrackerUI V2.0";
 
 
 
-
-
 PFrame f;
 secondApplet s;
 
@@ -632,6 +630,12 @@ public void draw() {
       bResponse.setVisible(false);
       bScale.setVisible(false);
       bSave.setVisible(false);
+      
+      bYSP.setVisible(false);
+      bYSM.setVisible(false);
+      bPSP.setVisible(false);
+      bPSM.setVisible(false);
+      fineCheckBox.setVisible(false);
 
       bCalcBias.setVisible(true);
       bFactReset.setVisible(true);
@@ -670,6 +674,12 @@ public void draw() {
       bCalcBias.setVisible(false);
       bFactReset.setVisible(false);
       bRescanPorts.setVisible(true);
+      
+      bYSP.setVisible(true);
+      bYSM.setVisible(true);
+      bPSP.setVisible(true);
+      bPSM.setVisible(true);
+      fineCheckBox.setVisible(true);
 
 
       bGXP.setVisible(false);
@@ -793,11 +803,11 @@ public void draw() {
   text("Drift Comp", (int)width-240, 420); 
   text("Temperature", (int)width-240, 440); 
 
-
+  if (info.indexOf("Calib")<0)
+  {
   text("Yaw Scale", (int)width-240, 520); 
   text("Pitch Scale", (int)width-240, 540); 
-
-
+  }
 
   textAlign(RIGHT);
 
@@ -805,9 +815,12 @@ public void draw() {
   text (nf(yawDriftComp, 0, 2), width -60, 420);
   text (nf((temperature-32.0f)/1.8f, 0, 2), width -60, 440);
   
+  
+    if (info.indexOf("Calib")<0)
+  {  
   text (nf(yawScale, 0, 2), width -60, 520);
   text (nf(pitchScale, 0, 2), width -60, 540);
-
+  }
   textAlign(LEFT);
 
 
@@ -939,24 +952,24 @@ public void exit() {
 
 public class secondApplet extends PApplet {
 
-  String [] mess= { "", "", "", "", "" ,"", "", "", "", ""};
-
+  String [] mess= { "", "", "", "", "" ,"", "", "", "", "",
+                    "", "", "", "", "" ,"", "", "", "", ""};
 
   public void setup() {
-    size(300, 200);
+    size(320, 400);
     noLoop();
   }
 
   public void setText(String s)
   {
-    for (int i=0;i<9;i++)
+    for (int i=0;i<19;i++)
       mess[i] = mess[i+1];
-    mess[9] = s;
+    mess[19] = s;
   }
 
   public void draw() {
     background(30);
-    for (int i=0;i<=9;i++)
+    for (int i=0;i<=19;i++)
       text('>' + mess[i], 5, 10+i*14);
   }
 }
@@ -971,7 +984,7 @@ public class PFrame extends JFrame {
 
   public PFrame() {
 
-    setBounds(0, 0, 300, 200);
+    setBounds(0, 0, 320, 360);
     s = new secondApplet();
     add(s);
     s.init();
@@ -995,11 +1008,18 @@ public void bUploadSketch(int theValue) {
   f.setText("Please wait. This may take up 60 seconds");
   f.setText("=========================================");
   buttonsActive = false;
-   delay(100);
+  delay(300);
   //   debug/verify/avrbootloader
+  try {
    ED.flash(sketchName.get(selectedSketch), portName,false,true,false);
+  }
+   catch (Exception e) {
+        f.setText("Caught Exception");
+     f.setText(e.getMessage());
+     delay(5000);
+  }
    f.setText("**** FLASHED ****");
-   delay(200);
+   delay(500);
    buttonsActive = true;
    found = false;   // force reconnect
   

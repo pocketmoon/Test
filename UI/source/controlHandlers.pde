@@ -13,11 +13,18 @@ public void bUploadSketch(int theValue) {
   f.setText("Please wait. This may take up 60 seconds");
   f.setText("=========================================");
   buttonsActive = false;
-   delay(100);
+  delay(300);
   //   debug/verify/avrbootloader
+  try {
    ED.flash(sketchName.get(selectedSketch), portName,false,true,false);
+  }
+   catch (Exception e) {
+        f.setText("Caught Exception");
+     f.setText(e.getMessage());
+     delay(5000);
+  }
    f.setText("**** FLASHED ****");
-   delay(200);
+   delay(500);
    buttonsActive = true;
    found = false;   // force reconnect
   

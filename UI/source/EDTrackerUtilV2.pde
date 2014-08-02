@@ -4,8 +4,6 @@
 
 String  infoString = "EDTrackerUI V2.0";
 
-
-
 import javax.swing.JFrame;
 
 PFrame f;
@@ -607,6 +605,12 @@ void draw() {
       bResponse.setVisible(false);
       bScale.setVisible(false);
       bSave.setVisible(false);
+      
+      bYSP.setVisible(false);
+      bYSM.setVisible(false);
+      bPSP.setVisible(false);
+      bPSM.setVisible(false);
+      fineCheckBox.setVisible(false);
 
       bCalcBias.setVisible(true);
       bFactReset.setVisible(true);
@@ -645,6 +649,12 @@ void draw() {
       bCalcBias.setVisible(false);
       bFactReset.setVisible(false);
       bRescanPorts.setVisible(true);
+      
+      bYSP.setVisible(true);
+      bYSM.setVisible(true);
+      bPSP.setVisible(true);
+      bPSM.setVisible(true);
+      fineCheckBox.setVisible(true);
 
 
       bGXP.setVisible(false);
@@ -768,11 +778,11 @@ void draw() {
   text("Drift Comp", (int)width-240, 420); 
   text("Temperature", (int)width-240, 440); 
 
-
+  if (info.indexOf("Calib")<0)
+  {
   text("Yaw Scale", (int)width-240, 520); 
   text("Pitch Scale", (int)width-240, 540); 
-
-
+  }
 
   textAlign(RIGHT);
 
@@ -780,9 +790,12 @@ void draw() {
   text (nf(yawDriftComp, 0, 2), width -60, 420);
   text (nf((temperature-32.0)/1.8, 0, 2), width -60, 440);
   
+  
+    if (info.indexOf("Calib")<0)
+  {  
   text (nf(yawScale, 0, 2), width -60, 520);
   text (nf(pitchScale, 0, 2), width -60, 540);
-
+  }
   textAlign(LEFT);
 
 
