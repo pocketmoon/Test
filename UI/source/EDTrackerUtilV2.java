@@ -24,10 +24,11 @@ import java.io.IOException;
 public class EDTrackerUtilV2 extends PApplet {
 
 // V2.0 
-// 20/07/2014 Big rewrite.
+// 2.0 20/07/2014 Big rewrite.
+// 2.1 03/08/2014 Fix 'save calib'  reducing yaw scale by 1
 
 
-String  infoString = "EDTrackerUI V2.0";
+String  infoString = "EDTrackerUI V2.1";
 
 
 
@@ -582,7 +583,7 @@ public void draw() {
   }
   else
   {// has ardi gone quiet!
-    if (lastSerialEvent+3000 < millis())
+    if (lastSerialEvent+10000 < millis())
     {
       f.setText("No data recieved from device.");
       disconnectPort();
@@ -1004,7 +1005,7 @@ public void bUploadSketch(int theValue) {
   delay(100);    
   disconnectPort();
   f.setText("=========================================");
-  f.setText("About to flash " + selectedSketchName + "to " + portName);
+  f.setText("About to flash " + sketchName.get(selectedSketch) + " to " + portName);
   f.setText("Please wait. This may take up 60 seconds");
   f.setText("=========================================");
   buttonsActive = false;
@@ -1019,10 +1020,15 @@ public void bUploadSketch(int theValue) {
      delay(5000);
   }
    f.setText("**** FLASHED ****");
-   delay(500);
    buttonsActive = true;
    found = false;   // force reconnect
-  
+
+//   ED = null;
+//   System.runFinalization();
+//   delay(500);
+//   System.gc();
+//   ED = new EDTrackerLibrary(this);
+
 }
 
 
@@ -1092,6 +1098,7 @@ public void bFactReset(int theValue) {
   arduinoPort.write("0\n");
   delay(200);
   arduinoPort.write("I\n");
+
 }
 
 public void bQuit(int theValue) {
@@ -1222,7 +1229,7 @@ public void bYSM (int theValue) {
   if (fineAdj)
   arduinoPort.write("d\n");
   else
-  arduinoPort.write("D\n");
+  arduinoPort.write("G\n");
 }
 
 

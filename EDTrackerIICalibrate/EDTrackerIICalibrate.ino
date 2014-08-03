@@ -13,6 +13,7 @@ const char* PROGMEM infoString = "ED Tracker Calibration V2.5";
 // 2014-06-15 Add option to clear bias to factory defaults
 // 2014-06-22 Fix LED blinking
 // 2014-08-01 many many things
+// 2014-08-03 Wipe all memory values during WIPE
 
 /* ============================================
 EDTracker device code is placed under the MIT License
@@ -127,9 +128,9 @@ void setup() {
   // join I2C bus (I2Cdev library doesn't do this automatically)
   Wire.begin();
   //
-  //  // Disable internal I2C pull-ups
-  //  cbi(PORTC, 4);
-  //  cbi(PORTC, 5);
+//  // Disable internal I2C pull-ups
+  cbi(PORTC, 4);
+ cbi(PORTC, 5);
 
   // Gyro sensitivity:      2000 degrees/sec
   // Accel sensitivity:     2g
@@ -321,9 +322,17 @@ void parseInput()
     }
     else if (command == '0')
     {
-      for (int i = 0; i < 3; i++)
-        gBias[i] = aBias[i] = 0;
-      saveBias();
+//      for (int i = 0; i < 3; i++)
+//        gBias[i] = aBias[i] = 0;
+//        
+//      saveBias();
+      
+      for (int i = 0; i <255; i++)
+       EEPROM.write(i, 0);    
+     
+      loadBiases();
+      biasInfo();
+      
     }
     else if (command == 'V')
     {

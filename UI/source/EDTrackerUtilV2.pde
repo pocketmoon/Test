@@ -1,8 +1,9 @@
 // V2.0 
-// 20/07/2014 Big rewrite.
+// 2.0 20/07/2014 Big rewrite.
+// 2.1 03/08/2014 Fix 'save calib'  reducing yaw scale by 1
 
 
-String  infoString = "EDTrackerUI V2.0";
+String  infoString = "EDTrackerUI V2.1";
 
 import javax.swing.JFrame;
 
@@ -557,7 +558,7 @@ void draw() {
   }
   else
   {// has ardi gone quiet!
-    if (lastSerialEvent+3000 < millis())
+    if (lastSerialEvent+10000 < millis())
     {
       f.setText("No data recieved from device.");
       disconnectPort();

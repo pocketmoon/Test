@@ -7,7 +7,7 @@
 //  Head Tracker Sketch
 //
 
-const char* PROGMEM infoString = "EDTrackerII V2.20";
+const char* PROGMEM infoString = "EDTrackerII V2.20.1";
 
 //
 // Changelog:
@@ -26,7 +26,8 @@ const char* PROGMEM infoString = "EDTrackerII V2.20";
 // 2014-06-15 Fix yaw lock at 180. Reduce recalibration delay
 // 2014-06-20 Wrap drift comp value and also wrap DMP + drift comp to prevent yaw lock
 // 2014-07-01 Add 'side mount' orientation numbers. Raise sping-back window
-// 2014-08/01 Add UI adjustable scaling. Arduino 157 compatible
+// 2014-08-01 Add UI adjustable scaling. Arduino 157 compatible
+// 2014-08/03 Fix clash of 'save drift' and 'decrement yaw scale 
 
 /* ============================================
 EDTracker device code is placed under the MIT License
@@ -620,7 +621,7 @@ void parseInput()
     if (command == 'e' || command == 'E' ||
         command == 'f' || command == 'F' ||
         command == 'c' || command == 'C' ||
-        command == 'd' || command == 'D')
+        command == 'd' || command == 'G')
     {
       if (command == 'c')
         yawScale += 0.25;
@@ -629,7 +630,7 @@ void parseInput()
 
       if (command == 'd')
         yawScale -= 0.25;
-      if (command == 'D')
+      if (command == 'G')
         yawScale -= 1.0;
 
       if (command == 'e')
