@@ -1,9 +1,9 @@
 // V2.0 
 // 2.0 20/07/2014 Big rewrite.
 // 2.1 03/08/2014 Fix 'save calib'  reducing yaw scale by 1
+// 2.2 04/08/2014 Smart scan of ports turns out to be frought with danger. Switch to manual selection
 
-
-String  infoString = "EDTrackerUI V2.1";
+String  infoString = "EDTrackerUI V2.2";
 
 import javax.swing.JFrame;
 
@@ -149,6 +149,9 @@ CheckBox fineCheckBox;
 
 DropdownList sketchList;
 
+DropdownList comList;
+
+
 int lastPort =0;
 long lastSerialEvent=0;
 int lastAttempt=0;
@@ -203,10 +206,6 @@ void setup() {
   bMonitor= cp5.addButton("bMonitor").setValue(0).setPosition(10, 570).setSize(bWidth, 28).setLabel("Toggle Monitoring");
 
 
-
-
-
-
   bQuit = cp5.addButton("bQuit").setValue(0).setPosition(10, 630).setSize(bWidth, 28).setLabel("Quit");
   bFactReset = cp5.addButton("bFactReset").setValue(0).setPosition(width-300, 630).setSize(bWidth, 28).setLabel("Wipe Tracker Settings");
 
@@ -224,9 +223,26 @@ void setup() {
   sketchList.setColorBackground(color(60));
   sketchList.setColorActive(color(255, 128));
   sketchList.toUpperCase(false);
+  
+  
+  
+//  comList = cp5.addDropdownList("COM PORTS").setPosition(320, 110).setSize(120, 200);
+//  comList.setBackgroundColor(color(190));
+//  comList.setItemHeight(30);
+//  comList.setBarHeight(28);
+//  comList.captionLabel().set("COM PORT");
+//  comList.captionLabel().style().marginTop = 3;
+//  comList.captionLabel().style().marginLeft = 3;
+//  comList.valueLabel().style().marginTop = 3;
+//  comList.setColorBackground(color(60));
+//  comList.setColorActive(color(255, 128));
+//  comList.toUpperCase(false);
+  
+  
+  
 
   //Gyro adjustment
-  bUploadSketch = cp5.addButton("bUploadSketch").setValue(0).setPosition( 240, 80).setSize(70, 28).setLabel("Flash");
+  //bUploadSketch = cp5.addButton("bUploadSketch").setValue(0).setPosition( 240, 80).setSize(70, 28).setLabel("Flash");
   //Gyro Bias Nudge
   bGXP= cp5.addButton("bGXP").setValue(0).setPosition( width-290, 27).setSize(20, 15).setLabel("+");
   bGXM= cp5.addButton("bGXM").setValue(0).setPosition( width-265, 27).setSize(20, 15).setLabel("-");

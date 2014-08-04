@@ -1,5 +1,22 @@
 
 
+void popComList()
+{
+  
+  return;
+  
+//  String sList[] = Serial.list();
+//  comList.clear();
+//  
+//  int l = Serial.list().length-1;
+//
+//  for (int i =0  ; i <=l  ; i++) 
+//  {
+//    String data = sList[i];
+//    comList.addItem(data,i);
+//  }   
+}
+
 void disconnectPort()
 {
   f.setText("Disconnect...");
@@ -12,10 +29,11 @@ void disconnectPort()
 void connectPort()
 {
   f.setText("Connect...");
-  arduinoPort = new Serial(this, portName, 57600);
+  arduinoPort = new Serial(this, portName, 115200);
   arduinoPort.clear();
   arduinoPort.bufferUntil(10);  
   arduinoPort.write('H');
+  popComList();
 }
 
 void scanPort()
@@ -25,6 +43,8 @@ void scanPort()
     f.setText("No COM Ports in use... ");
     return;    
   }
+
+  popComList();
 
 
   if ( Serial.list().length < lastPort-1)
@@ -52,9 +72,8 @@ void scanPort()
   try {
     arduinoPort = new Serial(this, portName, 115200);
     arduinoPort.clear();
-    arduinoPort.bufferUntil(10);  
+    arduinoPort.bufferUntil(10);
     arduinoPort.write('H');
-
     f.setText("Waiting for response from device on " + portName);
   }
   catch (Exception e) {

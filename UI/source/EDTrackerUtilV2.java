@@ -26,9 +26,9 @@ public class EDTrackerUtilV2 extends PApplet {
 // V2.0 
 // 2.0 20/07/2014 Big rewrite.
 // 2.1 03/08/2014 Fix 'save calib'  reducing yaw scale by 1
+// 2.2 04/08/2014 Smart scan of ports turns out to be frought with danger. Switch to manual selection
 
-
-String  infoString = "EDTrackerUI V2.1";
+String  infoString = "EDTrackerUI V2.2";
 
 
 
@@ -174,6 +174,9 @@ CheckBox fineCheckBox;
 
 DropdownList sketchList;
 
+DropdownList comList;
+
+
 int lastPort =0;
 long lastSerialEvent=0;
 int lastAttempt=0;
@@ -228,10 +231,6 @@ public void setup() {
   bMonitor= cp5.addButton("bMonitor").setValue(0).setPosition(10, 570).setSize(bWidth, 28).setLabel("Toggle Monitoring");
 
 
-
-
-
-
   bQuit = cp5.addButton("bQuit").setValue(0).setPosition(10, 630).setSize(bWidth, 28).setLabel("Quit");
   bFactReset = cp5.addButton("bFactReset").setValue(0).setPosition(width-300, 630).setSize(bWidth, 28).setLabel("Wipe Tracker Settings");
 
@@ -249,9 +248,26 @@ public void setup() {
   sketchList.setColorBackground(color(60));
   sketchList.setColorActive(color(255, 128));
   sketchList.toUpperCase(false);
+  
+  
+  
+//  comList = cp5.addDropdownList("COM PORTS").setPosition(320, 110).setSize(120, 200);
+//  comList.setBackgroundColor(color(190));
+//  comList.setItemHeight(30);
+//  comList.setBarHeight(28);
+//  comList.captionLabel().set("COM PORT");
+//  comList.captionLabel().style().marginTop = 3;
+//  comList.captionLabel().style().marginLeft = 3;
+//  comList.valueLabel().style().marginTop = 3;
+//  comList.setColorBackground(color(60));
+//  comList.setColorActive(color(255, 128));
+//  comList.toUpperCase(false);
+  
+  
+  
 
   //Gyro adjustment
-  bUploadSketch = cp5.addButton("bUploadSketch").setValue(0).setPosition( 240, 80).setSize(70, 28).setLabel("Flash");
+  //bUploadSketch = cp5.addButton("bUploadSketch").setValue(0).setPosition( 240, 80).setSize(70, 28).setLabel("Flash");
   //Gyro Bias Nudge
   bGXP= cp5.addButton("bGXP").setValue(0).setPosition( width-290, 27).setSize(20, 15).setLabel("+");
   bGXM= cp5.addButton("bGXM").setValue(0).setPosition( width-265, 27).setSize(20, 15).setLabel("-");
@@ -998,18 +1014,28 @@ public class PFrame extends JFrame {
 int selectedSketch;
 String selectedSketchName = "";
 
+String selectedPort;
+
 public void bUploadSketch(int theValue) {
   if (!buttonsActive  || selectedSketchName.length() < 1)
   return;
+  
+  
   arduinoPort.write('S');
   delay(100);    
   disconnectPort();
+  
+//  if (selectedPort.length() >1)
+//    portName = selectedPort;
+  
   f.setText("=========================================");
   f.setText("About to flash " + sketchName.get(selectedSketch) + " to " + portName);
   f.setText("Please wait. This may take up 60 seconds");
   f.setText("=========================================");
   buttonsActive = false;
-  delay(300);
+  delay(1000);
+  
+  
   //   debug/verify/avrbootloader
   try {
    ED.flash(sketchName.get(selectedSketch), portName,false,true,false);
@@ -1019,7 +1045,24 @@ public void bUploadSketch(int theValue) {
      f.setText(e.getMessage());
      delay(5000);
   }
+  
+//  String util = sketchPath("go.bat");
+//          println(util);
+
+//    try {
+//
+//open(new String[] { util });   
+//
+//  }
+//   catch (Exception e) {
+//        f.setText("Caught Exception");
+//     f.setText(e.getMessage());
+//  }
+  
+  
    f.setText("**** FLASHED ****");
+   delay(1000);
+
    buttonsActive = true;
    found = false;   // force reconnect
 
@@ -1293,6 +1336,11 @@ public void controlEvent(ControlEvent theEvent) {
       selectedSketch = (int)(theEvent.getGroup().getValue());
       selectedSketchName = sketchList.getItem(selectedSketch).getName();
       f.setText("Sketch selected: " +selectedSketchName);
+    }else
+     if (grp.indexOf("COM PORTS") >= 0)
+    {
+      selectedPort = comList.getItem((int)(theEvent.getGroup().getValue())).getName();
+      f.setText("Port selected: " +selectedPort);
     }
   } 
   else if (theEvent.isController()) {
@@ -1357,6 +1405,23 @@ class fLowPass {
 }
 
 
+public void popComList()
+{
+  
+  return;
+  
+//  String sList[] = Serial.list();
+//  comList.clear();
+//  
+//  int l = Serial.list().length-1;
+//
+//  for (int i =0  ; i <=l  ; i++) 
+//  {
+//    String data = sList[i];
+//    comList.addItem(data,i);
+//  }   
+}
+
 public void disconnectPort()
 {
   f.setText("Disconnect...");
@@ -1369,10 +1434,11 @@ public void disconnectPort()
 public void connectPort()
 {
   f.setText("Connect...");
-  arduinoPort = new Serial(this, portName, 57600);
+  arduinoPort = new Serial(this, portName, 115200);
   arduinoPort.clear();
   arduinoPort.bufferUntil(10);  
   arduinoPort.write('H');
+  popComList();
 }
 
 public void scanPort()
@@ -1382,6 +1448,8 @@ public void scanPort()
     f.setText("No COM Ports in use... ");
     return;    
   }
+
+  popComList();
 
 
   if ( Serial.list().length < lastPort-1)
@@ -1409,9 +1477,8 @@ public void scanPort()
   try {
     arduinoPort = new Serial(this, portName, 115200);
     arduinoPort.clear();
-    arduinoPort.bufferUntil(10);  
+    arduinoPort.bufferUntil(10);
     arduinoPort.write('H');
-
     f.setText("Waiting for response from device on " + portName);
   }
   catch (Exception e) {

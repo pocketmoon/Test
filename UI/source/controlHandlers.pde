@@ -2,18 +2,28 @@
 int selectedSketch;
 String selectedSketchName = "";
 
+String selectedPort;
+
 public void bUploadSketch(int theValue) {
   if (!buttonsActive  || selectedSketchName.length() < 1)
   return;
+  
+  
   arduinoPort.write('S');
   delay(100);    
   disconnectPort();
+  
+//  if (selectedPort.length() >1)
+//    portName = selectedPort;
+  
   f.setText("=========================================");
   f.setText("About to flash " + sketchName.get(selectedSketch) + " to " + portName);
   f.setText("Please wait. This may take up 60 seconds");
   f.setText("=========================================");
   buttonsActive = false;
-  delay(300);
+  delay(1000);
+  
+  
   //   debug/verify/avrbootloader
   try {
    ED.flash(sketchName.get(selectedSketch), portName,false,true,false);
@@ -23,7 +33,24 @@ public void bUploadSketch(int theValue) {
      f.setText(e.getMessage());
      delay(5000);
   }
+  
+//  String util = sketchPath("go.bat");
+//          println(util);
+
+//    try {
+//
+//open(new String[] { util });   
+//
+//  }
+//   catch (Exception e) {
+//        f.setText("Caught Exception");
+//     f.setText(e.getMessage());
+//  }
+  
+  
    f.setText("**** FLASHED ****");
+   delay(1000);
+
    buttonsActive = true;
    found = false;   // force reconnect
 
@@ -297,6 +324,11 @@ void controlEvent(ControlEvent theEvent) {
       selectedSketch = (int)(theEvent.getGroup().getValue());
       selectedSketchName = sketchList.getItem(selectedSketch).getName();
       f.setText("Sketch selected: " +selectedSketchName);
+    }else
+     if (grp.indexOf("COM PORTS") >= 0)
+    {
+      selectedPort = comList.getItem((int)(theEvent.getGroup().getValue())).getName();
+      f.setText("Port selected: " +selectedPort);
     }
   } 
   else if (theEvent.isController()) {
