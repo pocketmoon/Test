@@ -342,10 +342,12 @@ void parseInput()
 //      saveBias();
       
       for (int i = 0; i <255; i++)
-       EEPROM.write(i, 0);    
-     
+       EEPROM.write(i, 0);   
+       
+      pollMPU=0;
       loadBiases();
       biasInfo();
+      polling();
       
     }
     else if (command == 'V')
