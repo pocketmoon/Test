@@ -3,18 +3,18 @@
 void popComList()
 {
   
-  return;
+  //return;
   
-//  String sList[] = Serial.list();
-//  comList.clear();
-//  
-//  int l = Serial.list().length-1;
-//
-//  for (int i =0  ; i <=l  ; i++) 
-//  {
-//    String data = sList[i];
-//    comList.addItem(data,i);
-//  }   
+  String sList[] = Serial.list();
+  comList.clear();
+  
+  int l = Serial.list().length-1;
+
+  for (int i =0  ; i <=l  ; i++) 
+  {
+    String data = sList[i];
+    comList.addItem(data,i);
+  }   
 }
 
 void disconnectPort()
@@ -77,9 +77,9 @@ void scanPort()
     f.setText("Waiting for response from device on " + portName);
   }
   catch (Exception e) {
-    f.setText("Waiting for connecting to " + portName);
+    f.setText("Error  for connecting to " + portName);
     lastPort--;
-     if (lastPort <0)
+     if (lastPort <0  || lastPort > Serial.list().length )
       lastPort = Serial.list().length -1;
     println(e);
   }

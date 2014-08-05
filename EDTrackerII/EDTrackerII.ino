@@ -7,7 +7,7 @@
 //  Head Tracker Sketch
 //
 
-const char* PROGMEM infoString = "EDTrackerII V2.20.1";
+const char* PROGMEM infoString = "EDTrackerII V2.20.3";
 
 //
 // Changelog:
@@ -27,7 +27,8 @@ const char* PROGMEM infoString = "EDTrackerII V2.20.1";
 // 2014-06-20 Wrap drift comp value and also wrap DMP + drift comp to prevent yaw lock
 // 2014-07-01 Add 'side mount' orientation numbers. Raise sping-back window
 // 2014-08-01 Add UI adjustable scaling. Arduino 157 compatible
-// 2014-08/03 Fix clash of 'save drift' and 'decrement yaw scale 
+// 2014-08/03 Fix clash of 'save drift' and 'decrement yaw scale
+// 2014-08/04 Config based Poll MPU or interrupts 
 
 /* ============================================
 EDTracker device code is placed under the MIT License
@@ -70,7 +71,7 @@ float lX = 0.0;
 unsigned int ticksInZone = 0;
 unsigned int reports = 0;
 
-#define POLLMPUxx
+boolean pollMPU = false;
 
 /* Starting sampling rate. Ignored if POLLMPU is defined above */
 #define DEFAULT_MPU_HZ    (200)
@@ -123,6 +124,9 @@ float xDriftComp = 0.0;
 #define EE_PITCHSCALE 30
 #define EE_YAWEXPSCALE 31
 #define EE_PITCHEXPSCALE 32
+
+#define EE_POLLMPU 33
+
 
 
 #define SDA_PIN 2
@@ -245,6 +249,16 @@ void setup() {
 
   expScaleMode = EEPROM.read(EE_EXPSCALEMODE);
   getScales();
+  
+  pollMPU = EEPROM.read(EE_POLLMPU);
+
+  // by default  
+  if (pollMPU >1)
+  {
+    pollMPU = 1;
+    EEPROM.write(EE_POLLMPU,pollMPU); 
+  }
+
 
 
 
@@ -264,8 +278,6 @@ void setup() {
   // Disable internal I2C pull-ups
   cbi(PORTD, 0);
   cbi(PORTD, 1);
-
-
 
   // Initialize the MPU:
   //
@@ -330,11 +342,7 @@ void loop()
 
   // If the MPU Interrupt occurred, read the fifo and process the data
 
-#ifdef POLLMPU
-  if (true)    //new_gyro && hal.dmp_on)
-#else
-  if (new_gyro && dmp_on)
-#endif
+  if ((new_gyro && dmp_on)  || pollMPU)
   {
     short gyro[3], accel[3], sensors;
     unsigned char more = 0;
@@ -367,19 +375,17 @@ void loop()
         return;
       }
 
-
-
       // scale to range -32767 to 32767
       newX = newX   * 10430.06;
       newY = newY   * 10430.06;
       newZ = newZ   * 10430.06;
 
-      if (outputMode == DBG)
-      {
-        Serial.println("-");
-        Serial.print("newX ");
-        Serial.println(newX);
-      }
+//      if (outputMode == DBG)
+//      {
+//        Serial.println("-");
+//        Serial.print("newX ");
+//        Serial.println(newX);
+//      }
 
       if (!calibrated)
       {
@@ -711,6 +717,7 @@ void parseInput()
       Serial.println(revision);
 
       scl();
+      polling();
 
       Serial.print("O\t");
       Serial.println(orientation);
@@ -766,11 +773,10 @@ void parseInput()
 void gyro_data_ready_cb(void) {
   new_gyro = 1;
 }
-#ifndef POLLMPU
 ISR(INT6_vect) {
   new_gyro = 1;
 }
-#endif
+
 
 void tap_cb (unsigned char p1, unsigned char p2)
 {
@@ -838,16 +844,17 @@ void disable_mpu() {
   //hal.dmp_on = 0;
   dmp_on = 0;
 
-#ifndef POLLMPU
-  EIMSK &= ~(1 << INT6);      //deactivate interupt
-#endif
+  if (!pollMPU)
+    EIMSK &= ~(1 << INT6);      //deactivate interupt
+
 }
 
 void enable_mpu() {
-#ifndef POLLMPU
-  EICRB |= (1 << ISC60) | (1 << ISC61); // sets the interrupt type for EICRB (INT6)
-  EIMSK |= (1 << INT6); // activates the interrupt. 6 for 6, etc
-#endif
+  if (!pollMPU)
+  {
+    EICRB |= (1 << ISC60) | (1 << ISC61); // sets the interrupt type for EICRB (INT6)
+    EIMSK |= (1 << INT6); // activates the interrupt. 6 for 6, etc
+  }
 
   mpu_set_dmp_state(1);  // This enables the DMP; at this point, interrupts should commence
   dmp_on = 1;
@@ -920,25 +927,25 @@ void getScales()
 {
   if (expScaleMode)
   {
-    yawScale = (float)EEPROM.read(EE_YAWEXPSCALE)/4.0;
-    pitchScale =(float)EEPROM.read(EE_PITCHEXPSCALE)/4.0;
+    yawScale = (float)EEPROM.read(EE_YAWEXPSCALE) / 4.0;
+    pitchScale = (float)EEPROM.read(EE_PITCHEXPSCALE) / 4.0;
 
-    if (yawScale == 0 || yawScale > 99)
+    if (yawScale == 0 || yawScale > 60)
       yawScale = 14.0;
 
-    if (pitchScale == 0 || pitchScale > 99)
+    if (pitchScale == 0 || pitchScale >60)
       pitchScale = 14.0;
   }
   else
   {
-    yawScale = (float)EEPROM.read(EE_YAWSCALE)/4.0;
-    pitchScale = (float)EEPROM.read(EE_PITCHSCALE)/4.0;
+    yawScale = (float)EEPROM.read(EE_YAWSCALE) / 4.0;
+    pitchScale = (float)EEPROM.read(EE_PITCHSCALE) / 4.0;
 
-    if (yawScale == 0 || yawScale > 99)
-      yawScale = 4.0;
+    if (yawScale == 0 || yawScale > 60)
+      yawScale = 5.0;
 
-    if (pitchScale == 0 || pitchScale > 99)
-      pitchScale = 4.0;
+    if (pitchScale == 0 || pitchScale > 60)
+      pitchScale = 5.0;
   }
 }
 
@@ -947,14 +954,22 @@ void setScales()
 {
   if (expScaleMode)
   {
-    EEPROM.write(EE_YAWEXPSCALE, (int)(yawScale*4));
-    EEPROM.write(EE_PITCHEXPSCALE, (int)(pitchScale*4));
+    EEPROM.write(EE_YAWEXPSCALE, (int)(yawScale * 4));
+    EEPROM.write(EE_PITCHEXPSCALE, (int)(pitchScale * 4));
   }
   else
   {
-    EEPROM.write(EE_YAWSCALE, (int)(yawScale*4));
-    EEPROM.write(EE_PITCHSCALE, (int)(pitchScale*4));
+    EEPROM.write(EE_YAWSCALE, (int)(yawScale * 4));
+    EEPROM.write(EE_PITCHSCALE, (int)(pitchScale * 4));
   }
+}
+
+
+void 
+polling()    // Read only in main sketch
+{
+  Serial.print("p\t");
+  Serial.println(pollMPU);
 }
 
 void

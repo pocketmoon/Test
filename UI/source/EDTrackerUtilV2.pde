@@ -42,6 +42,7 @@ String  orientation="Unknown";
 String   scaleMode="Unknown";
 
 String info = "Unknown Device";
+String lastKnownDevice = "Unknown Device";
 
 String []messages = {
   "", "", "", "", "", "", "", "", "", ""
@@ -59,6 +60,7 @@ String  buffer;      //String for testing serial communication
 float DMPRoll, DMPPitch, DMPYaw;
 
 boolean expScaleMode = false;// false for linear
+boolean pollMPU = false;
 float scaleFactor=1.0;
 
 int  rawGyroX, rawGyroY, rawGyroZ;
@@ -117,6 +119,7 @@ Button bQuit;
 Button bSketchList;
 Button bRescanPorts;
 Button bUploadSketch;
+Button bPoll;
 
 //Gyro Bias Nudge
 Button bGXP;
@@ -188,6 +191,9 @@ void setup() {
 
   bMount = cp5.addButton("bMount").setValue(0).setPosition(10, 230).setSize(bWidth, 28).setLabel("Rotate Mounting Axis");
   bResponse = cp5.addButton("bResponse").setValue(0).setPosition(10, 290).setSize(bWidth, 28).setLabel("Toggle Response Mode");
+  bPoll = cp5.addButton("bPoll").setValue(0).setPosition(10, 350).setSize(bWidth, 28).setLabel("Toggle Sensor Mode");
+
+
 
   //  yawScale   =  cp5.addSlider("yawSlider").setPosition(width-300, 550).setSize(180, 20).setRange(0.0, 20.0)
   //    .setNumberOfTickMarks(81).setSliderMode(Slider.FLEXIBLE).setLabel("Yaw Scale"); 
@@ -226,17 +232,17 @@ void setup() {
   
   
   
-//  comList = cp5.addDropdownList("COM PORTS").setPosition(320, 110).setSize(120, 200);
-//  comList.setBackgroundColor(color(190));
-//  comList.setItemHeight(30);
-//  comList.setBarHeight(28);
-//  comList.captionLabel().set("COM PORT");
-//  comList.captionLabel().style().marginTop = 3;
-//  comList.captionLabel().style().marginLeft = 3;
-//  comList.valueLabel().style().marginTop = 3;
-//  comList.setColorBackground(color(60));
-//  comList.setColorActive(color(255, 128));
-//  comList.toUpperCase(false);
+  comList = cp5.addDropdownList("COM PORTS").setPosition(320, 110).setSize(120, 200);
+  comList.setBackgroundColor(color(190));
+  comList.setItemHeight(30);
+  comList.setBarHeight(28);
+  comList.captionLabel().set("COM PORT");
+  comList.captionLabel().style().marginTop = 3;
+  comList.captionLabel().style().marginLeft = 3;
+  comList.valueLabel().style().marginTop = 3;
+  comList.setColorBackground(color(60));
+  comList.setColorActive(color(255, 128));
+  comList.toUpperCase(false);
   
   
   
@@ -428,10 +434,17 @@ void serialEvent(Serial p) {
 //      } 
        else if (data[0].equals("s"))
       {
-        expScaleMode =  (int(data[1]) == 1);
+        expScaleMode =  (int(data[1].trim()) == 1);
         yawScale   =  float(data[2]);
         pitchScale =  float(data[3]);
       } 
+      
+      else if (data[0].equals("p"))
+      {
+        println("Polling "+ dataIn);
+        pollMPU =  (int(data[1].trim()) == 1);
+      } 
+      
       else  if (data[0].equals("I"))
       {
         println("Info "+ data[0]);
@@ -585,16 +598,18 @@ void draw() {
   pushMatrix();
 
 
-  //background(90);
-  background(bg);
-
+  
+  hint(DISABLE_DEPTH_TEST);
+   background(10,100,200);
+ hint(ENABLE_DEPTH_TEST);
+ 
   fill(0, 0, 0);
   rect(0, height-100, width, height);
 
 
   fill(255, 255, 255);
   textSize(26); 
-  text("ED Tracker Configuration and Calibration Utility", 10, 30);
+  text(infoString, 10, 30);
 
 
   if (monitoring)
@@ -612,7 +627,9 @@ void draw() {
   //  text("1 Toggle Monitoring", 10, 100);
   //  text("2 Get Info", 10, 120);
 
-
+if (lastKnownDevice != info)
+{
+   lastKnownDevice = info;
   if (!info.equals("Unknown Device"))
   {
     if (info.indexOf("Calib")>0)
@@ -632,6 +649,8 @@ void draw() {
       bCalcBias.setVisible(true);
       bFactReset.setVisible(true);
       bRescanPorts.setVisible(true);
+      bPoll.setVisible(true);
+
 
       bGXP.setVisible(true);
       bGXM.setVisible(true);
@@ -672,6 +691,7 @@ void draw() {
       bPSP.setVisible(true);
       bPSM.setVisible(true);
       fineCheckBox.setVisible(true);
+      bPoll.setVisible(false);
 
 
       bGXP.setVisible(false);
@@ -716,11 +736,9 @@ void draw() {
     bAZP.setVisible(false);
     bAZM.setVisible(false);
   }
-
-
+}
 
   fill(255, 255, 150);
-
 
   if (info.indexOf("Calib")<0)
   {
@@ -736,6 +754,13 @@ void draw() {
     text (nf(DMPRoll*rad2deg, 0, 2), (int)width-60, 140);
     text (nf(heading*rad2deg, 0, 2), (int)width-60, 160);
     textAlign(LEFT);
+    
+          fill(255, 255, 160);
+
+     if (pollMPU) 
+      text("(Polling)", 20, 400);
+    else
+      text("(Interrupt)", 20, 400);
   } 
   else
   {
@@ -778,6 +803,12 @@ void draw() {
     text (rawAccelX/10, (int)width-100, 100); 
     text (rawAccelY/10, (int)width-100, 120);
     text ((rawAccelZ-16380)/10, (int)width-100, 140);
+      fill(255, 255, 160);
+
+     if (pollMPU) 
+      text("Polling", 20, 400);
+    else
+      text("Interrupt", 20, 400);
   }
 
 
@@ -826,12 +857,14 @@ void draw() {
       text("Exponential", 20, 340);
     else
       text("Linear", 20, 340);
+     
 
     //  text("Response Scale Factor", (int)width-240, 440); 
     //  text (nfp(scaleFactor, 0, 2), width -100, 440);
 
     text("x" + driftScale, 20, 490);
   }
+  
 
 
 
@@ -907,7 +940,6 @@ void draw() {
   ellipse(width-130  + constrain (rawGyroX, -90, 90), 280 -constrain(rawGyroY/2, -90, 90), 5, 5);
 
 
-
   fill(255, 255, 255);
   ambientLight(80, 80, 100);
   pointLight(255, 255, 255, 1000, -2000, 1000 );
@@ -917,14 +949,14 @@ void draw() {
   //rotateY(heading);
   rotateX(DMPPitch );// + pitchOffset);
 
-  //hint(ENABLE_DEPTH_TEST);
+  hint(ENABLE_DEPTH_TEST);
 
   gfx.origin(new Vec3D(), 200);
   noStroke();
   noSmooth();
-  gfx.mesh(mesh, false);
+  gfx.mesh(mesh,false);
   popMatrix();
-  //hint(DISABLE_DEPTH_TEST);
+  hint(DISABLE_DEPTH_TEST);
 }
 
 

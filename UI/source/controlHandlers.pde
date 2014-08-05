@@ -2,26 +2,32 @@
 int selectedSketch;
 String selectedSketchName = "";
 
-String selectedPort;
+String selectedPort = "";
 
 public void bUploadSketch(int theValue) {
-  if (!buttonsActive  || selectedSketchName.length() < 1)
+    
+  if (!buttonsActive)
   return;
   
+  if (selectedSketchName.length() < 1)
+  {
+     f.setText("No sketch selected!");
+   return;  
+  }  
   
   arduinoPort.write('S');
   delay(100);    
   disconnectPort();
   
-//  if (selectedPort.length() >1)
-//    portName = selectedPort;
+  if (selectedPort.length() >1)
+    portName = selectedPort;
   
   f.setText("=========================================");
   f.setText("About to flash " + sketchName.get(selectedSketch) + " to " + portName);
-  f.setText("Please wait. This may take up 60 seconds");
+  f.setText("Please wait. This may take up to 60 seconds");
   f.setText("=========================================");
   buttonsActive = false;
-  delay(1000);
+  delay(5000);
   
   
   //   debug/verify/avrbootloader
@@ -29,36 +35,18 @@ public void bUploadSketch(int theValue) {
    ED.flash(sketchName.get(selectedSketch), portName,false,true,false);
   }
    catch (Exception e) {
-        f.setText("Caught Exception");
+        f.setText("An Erroro Occurred. Please retry");
      f.setText(e.getMessage());
+     e.printStackTrace();
      delay(5000);
   }
-  
-//  String util = sketchPath("go.bat");
-//          println(util);
 
-//    try {
-//
-//open(new String[] { util });   
-//
-//  }
-//   catch (Exception e) {
-//        f.setText("Caught Exception");
-//     f.setText(e.getMessage());
-//  }
-  
   
    f.setText("**** FLASHED ****");
-   delay(1000);
+   delay(500);
 
    buttonsActive = true;
    found = false;   // force reconnect
-
-//   ED = null;
-//   System.runFinalization();
-//   delay(500);
-//   System.gc();
-//   ED = new EDTrackerLibrary(this);
 
 }
 
@@ -99,6 +87,12 @@ public void bResponse(int theValue) {
   if (!buttonsActive)
   return;
   arduinoPort.write("t\n");
+}
+
+public void bPoll(int theValue) {
+  if (!buttonsActive)
+  return;
+  arduinoPort.write("p\n");
 }
 
 public void bScale(int theValue) {

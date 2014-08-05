@@ -2,7 +2,7 @@
 //  Head Tracker Sketch
 //
 
-const char* PROGMEM infoString = "ED Tracker Calibration V2.5";
+const char* PROGMEM infoString = "ED Tracker Calibration V2.5.1";
 
 //
 // Changelog:
@@ -14,6 +14,7 @@ const char* PROGMEM infoString = "ED Tracker Calibration V2.5";
 // 2014-06-22 Fix LED blinking
 // 2014-08-01 many many things
 // 2014-08-03 Wipe all memory values during WIPE
+// 2014-08-04 Add ability to toggle MPU Polling on/off
 
 /* ============================================
 EDTracker device code is placed under the MIT License
@@ -95,6 +96,10 @@ long gBias[3], aBias[3], fBias[3];
 // 2 bytes
 #define EE_XDRIFTCOMP 26
 
+#define EE_POLLMPU 33
+
+boolean pollMPU=false;
+
 //Need some helper funct to read/write integers
 void writeIntEE(int address, int value ) {
   EEPROM.write(address + 1, value >> 8); //upper byte
@@ -148,6 +153,15 @@ void setup() {
   delay(100);
   //mpu_get_biases
   //  enable_mpu();
+  
+  pollMPU = EEPROM.read(EE_POLLMPU);  
+  // by default  
+  if (pollMPU >1)
+  {
+    pollMPU = 1;
+    EEPROM.write(EE_POLLMPU,pollMPU); 
+  }
+  
 }
 
 /***************************************
@@ -345,6 +359,12 @@ void parseInput()
     {
       Serial.println("H"); // Hello
     }
+     else if (command == 'p')
+    {
+      pollMPU=!pollMPU;
+      EEPROM.write(EE_POLLMPU, pollMPU);
+      polling();
+    }
     else if (command == 'I')
     {
       Serial.print("I\t");
@@ -352,7 +372,7 @@ void parseInput()
       loadBiases();
       biasInfo();
       mess("M\tFact Bias ", fBias);
-
+      polling();
       Serial.print("M\tMPU Revision ");
       Serial.println(revision);
     }
@@ -360,11 +380,7 @@ void parseInput()
     {
       update_bias();
     }
-    //    else if (command == 'F')
-    //    {
-    //      //flip where bias values are stored
-    //      flipBias();
-    //    }
+
 
     while (Serial.available() > 0)
       command = Serial.read();
@@ -568,44 +584,14 @@ void loadBiases() {
   return ;
 }
 
-/*
-void flipBias()
+
+
+void 
+polling()    // Read only in main sketch
 {
-  long zeros[3] = {0, 0, 0};
-  Serial.println("M\t Push Bias to DMP Regs.");
-  // mpu_set_accel_bias_6050_reg(fBias,0);
-
-  delay (100);
-  mpu_set_gyro_bias_reg(zeros);
-
-
-  unsigned short sens;
-
-  mpu_get_accel_sens(&sens);
-  Serial.print("M\t Accel Sens ");
-  Serial.println(sens);
-
-  long a[3];
-
-  for (int i = 0; i < 3; i++)
-    a[i] = (aBias[i] * (long)sens) / (long)4096; //+/- 8g to q16i
-
-  //dmp_set_accel_bias(a);
-
-  float fsens;
-
-  mpu_get_gyro_sens(&fsens);
-  Serial.print("M\t Gyro Sens ");
-  Serial.println(fsens);
-
-  for (int i = 0; i < 3; i++)
-  {
-    a[i] = (long)(gBias[i] * 32767); // in +/- 1000dps con to phys Q16
-
-    Serial.print("M\t UGH ");
-    Serial.println(a[i]);
-  }
-  dmp_set_gyro_bias(a);
+  Serial.print("p\t");
+  Serial.println(pollMPU);
 }
 
-*/
+
+
