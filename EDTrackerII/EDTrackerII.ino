@@ -29,7 +29,7 @@ const char* PROGMEM infoString = "EDTrackerII V2.20.4";
 // 2014-08-01 Add UI adjustable scaling. Arduino 157 compatible
 // 2014-08/03 Fix clash of 'save drift' and 'decrement yaw scale
 // 2014-08-04 Config based Poll MPU or interrupts 
-// 2014-08-16 If no interrupts fall back t polling.
+// 2014-08-16 If no interrupts fall back to polling.
 
 /* ============================================
 EDTracker device code is placed under the MIT License
@@ -175,7 +175,7 @@ boolean calibrated = false;
 //unsigned short  calibrateTime     = 1000;
 
 //Number of samples to take when recalibrating
-byte  recalibrateSamples =  200;
+byte  recalibrateSamples =  100;
 
 // Holds the time since sketch stared
 unsigned long  nowMillis;
@@ -263,7 +263,7 @@ void setup() {
 
 
 
-  xDriftComp = (float)readIntEE(EE_XDRIFTCOMP) / 256.0;
+  xDriftComp = (float)readIntEE(EE_XDRIFTCOMP) / 512.0;
 
   // join I2C bus (I2Cdev library doesn't do this automatically)
   Wire.begin();
@@ -315,8 +315,6 @@ void setup() {
 * Gyro/Accel/DMP State
 ****************************************/
 unsigned long sensor_timestamp;
-
-
 
 /****************************************
 * Gyro/Accel/DMP Configuration
@@ -374,9 +372,9 @@ void loop()
       // Update client with yaw/pitch/roll and tilt-compensated magnetometer data
 
       // Use some code to convert to R P Y
-      float newZ =  atan2(2.0 * (q.y * q.z + q.w * q.x), q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z);
-      float newY = -asin(-2.0 * (q.x * q.z - q.w * q.y));
-      float newX = -atan2(2.0 * (q.x * q.y + q.w * q.z), q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z);
+      float newZ = 10430.06 *  atan2(2.0 * (q.y * q.z + q.w * q.x), q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z);
+      float newY = -10430.06 * asin(-2.0 * (q.x * q.z - q.w * q.y));
+      float newX = -10430.06 * atan2(2.0 * (q.x * q.y + q.w * q.z), q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z);
 
       // if we're still in the initial 'settling' period do nothing else...
 //      if (nowMillis < calibrateTime)
@@ -385,9 +383,9 @@ void loop()
 //      }
 
       // scale to range -32767 to 32767
-      newX = newX   * 10430.06;
-      newY = newY   * 10430.06;
-      newZ = newZ   * 10430.06;
+//      newX = newX   * 10430.06;
+//      newY = newY   * 10430.06;
+//      newZ = newZ   * 10430.06;
 
 //      if (outputMode == DBG)
 //      {
@@ -396,6 +394,12 @@ void loop()
 //        Serial.println(newX);
 //      }
 
+      // Have we been asked to recalibrate ?
+      if (digitalRead(BUTTON_PIN) == LOW)
+      {
+        recenter();
+      }
+      
       if (!calibrated)
       {
         if (sampleCount < recalibrateSamples)
@@ -426,12 +430,7 @@ void loop()
         return;
       }
 
-      // Have we been asked to recalibrate ?
-      if (digitalRead(BUTTON_PIN) == LOW)
-      {
-        recenter();
-        return;
-      }
+
 
       short mag[3];
       unsigned long timestamp;
@@ -482,6 +481,9 @@ void loop()
         joySt.xAxis = iX ;
         joySt.yAxis = iY;
         joySt.zAxis = iZ;
+        
+        Tracker.setState(&joySt);
+        reports++;
 
       if (outputMode == UI)
       {
@@ -498,8 +500,7 @@ void loop()
         Serial.println("");
       }
 
-      Tracker.setState(&joySt);
-      reports++;
+
 
 
       //self centering
@@ -508,7 +509,7 @@ void loop()
       //  and pitch is levelish then start to count
       if (outputMode != UI )
       {
-        if (fabs(iX) < 3000.0 && fabs(iX - lX) < 5.0 && fabs(iY) < 800)
+        if (fabs(iX) < 2500.0 && fabs(iX - lX) < 5.0 && fabs(iY) < 700)
         {
           ticksInZone++;
           dzX += iX;
@@ -521,7 +522,7 @@ void loop()
         lX = iX;
 
         // if we stayed looking ahead-ish long enough then adjust yaw offset
-        if (ticksInZone >= 10)
+        if (ticksInZone >= 20)
         {
           // NB this currently causes a small but visible jump in the
           // view. Useful for debugging!
@@ -530,8 +531,6 @@ void loop()
           ticksInZone = 0;
           dzX = 0.0;
         }
-
-
       }
 
       parseInput();
@@ -576,9 +575,9 @@ void loop()
         if (outputMode == UI)
         {
           Serial.print("D\t");
-          Serial.print(dX / (float)driftSamples);
+          Serial.print(dX / (float)driftSamples,5);
           Serial.print("\t");
-          Serial.println(xDriftComp);
+          Serial.println(xDriftComp,5);
 
           //          Serial.print("M\t Updates per second ");
           //          Serial.println(reports);
@@ -642,7 +641,7 @@ void parseInput()
      if (command == 'a')
         xDriftComp -= 0.01;
       if (command == 'A')
-        xDriftComp -= 0.01;
+        xDriftComp += 0.01;
 
 
     if (command == 'S')
@@ -652,13 +651,13 @@ void parseInput()
       dmp_set_fifo_rate(DEFAULT_MPU_HZ);
 
     }
-    else if (command == '-')
-    {
-      if (outputMode != DBG)
-        outputMode = DBG;
-      else
-        outputMode = OFF;
-    }
+//    else if (command == '-')
+//    {
+//      if (outputMode != DBG)
+//        outputMode = DBG;
+//      else
+//        outputMode = OFF;
+//    }
     else if (command == 'H')
     {
       Serial.println("H"); // Hello
@@ -736,7 +735,7 @@ void parseInput()
     {
       //Save Drift offset
       xDriftComp = (dX / (float)driftSamples) + xDriftComp;
-      writeIntEE(EE_XDRIFTCOMP, (int)(xDriftComp * 256.0));
+      writeIntEE(EE_XDRIFTCOMP, (int)(xDriftComp * 512.0));
       //Serial.println("M\tSaved Drift Comp ");
       //Serial.println(xDriftComp);
       Serial.print("R\t");
@@ -954,7 +953,6 @@ void setScales()
     EEPROM.write(EE_PITCHSCALE, (int)(pitchScale * 4));
   }
 }
-
 
 void 
 polling()    // Read only in main sketch
