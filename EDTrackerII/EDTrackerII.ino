@@ -7,7 +7,7 @@
 //  Head Tracker Sketch
 //
 
-const char* PROGMEM infoString = "EDTrackerII V2.20.3";
+const char* PROGMEM infoString = "EDTrackerII V2.20.4";
 
 //
 // Changelog:
@@ -28,7 +28,8 @@ const char* PROGMEM infoString = "EDTrackerII V2.20.3";
 // 2014-07-01 Add 'side mount' orientation numbers. Raise sping-back window
 // 2014-08-01 Add UI adjustable scaling. Arduino 157 compatible
 // 2014-08/03 Fix clash of 'save drift' and 'decrement yaw scale
-// 2014-08/04 Config based Poll MPU or interrupts 
+// 2014-08-04 Config based Poll MPU or interrupts 
+// 2014-08-16 If no interrupts fall back t polling.
 
 /* ============================================
 EDTracker device code is placed under the MIT License
@@ -74,7 +75,7 @@ unsigned int reports = 0;
 boolean pollMPU = false;
 
 /* Starting sampling rate. Ignored if POLLMPU is defined above */
-#define DEFAULT_MPU_HZ    (200)
+#define DEFAULT_MPU_HZ    (100)
 // 50 ok
 
 #define EMPL_TARGET_ATMEGA328
@@ -171,7 +172,7 @@ boolean calibrated = false;
 // no longer needed
 //Allows the MPU6050 to settle for 10 seconds.
 //There should be no drift after this time
-unsigned short  calibrateTime     = 1000;
+//unsigned short  calibrateTime     = 1000;
 
 //Number of samples to take when recalibrating
 byte  recalibrateSamples =  200;
@@ -245,7 +246,7 @@ void setup() {
   digitalWrite(SDA_PIN, HIGH);
   digitalWrite(SDA_PIN, LOW);
 
-  orientation = constrain(EEPROM.read(EE_ORIENTATION), 0, 3);
+  orientation = constrain(EEPROM.read(EE_ORIENTATION), 0, 5);
 
   expScaleMode = EEPROM.read(EE_EXPSCALEMODE);
   getScales();
@@ -335,15 +336,23 @@ void recenter()
 //unsigned short dmp_update_rate; // update rate, in hZ (possible values are between 4 and 1000).  Default:  100
 //unsigned short gyro_fsr;  // Gyro full-scale_rate, in +/- degrees/sec, possible values are 250, 500, 1000 or 2000.  Default:  2000
 boolean new_gyro , dmp_on;
+long lastData=0;
+
 void loop()
 {
   blink();
   nowMillis = millis();
 
   // If the MPU Interrupt occurred, read the fifo and process the data
+  if (!pollMPU)
+  {
+   if (nowMillis - lastData >  3000)
+     pollMPU=true;
+  }
 
   if ((new_gyro && dmp_on)  || pollMPU)
   {
+    lastData=nowMillis;
     short gyro[3], accel[3], sensors;
     unsigned char more = 0;
     long quat[4];
@@ -370,10 +379,10 @@ void loop()
       float newX = -atan2(2.0 * (q.x * q.y + q.w * q.z), q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z);
 
       // if we're still in the initial 'settling' period do nothing else...
-      if (nowMillis < calibrateTime)
-      {
-        return;
-      }
+//      if (nowMillis < calibrateTime)
+//      {
+//        return;
+//      }
 
       // scale to range -32767 to 32767
       newX = newX   * 10430.06;
@@ -431,12 +440,6 @@ void loop()
 
       // apply calibration offsets
       newX = newX - cx;
-      //
-      //            if (outputMode == DBG)
-      //      {
-      //      Serial.print("newX-cx ");
-      //Serial.println(newX);
-      //      }
 
       // this should take us back to zero BUT we may have wrapped so ..
       if (newX < -32768.0)
@@ -448,22 +451,11 @@ void loop()
       newY = newY - cy;
       newZ = newZ - cz;
 
-      //      if (outputMode == DBG)
-      //      {
-      //      Serial.print("newXwrapped  ");
-      //Serial.println(newX);
-      //      }
-
       //clamp at 90 degrees left and right
       newX = constrain(newX, -16383.0, 16383.0);
       newY = constrain(newY, -16383.0, 16383.0);
       newZ = constrain(newZ, -16383.0, 16383.0);
 
-      //            if (outputMode == DBG)
-      //      {
-      //            Serial.print("newX constrained  ");
-      //Serial.println(newX);
-      //      }
       long  iX ;
       long  iY ;
       long  iZ ;
@@ -486,17 +478,10 @@ void loop()
       iY = constrain(iY, -32767, 32767);
       iZ = constrain(iZ, -32767, 32767);
 
-      // Do it to it.
-      if (!hush)
-      {
+
         joySt.xAxis = iX ;
         joySt.yAxis = iY;
         joySt.zAxis = iZ;
-      }
-      else
-      {
-        joySt.xAxis = joySt.yAxis =  joySt.zAxis = 0;
-      }
 
       if (outputMode == UI)
       {
@@ -654,6 +639,12 @@ void parseInput()
 
     }
 
+     if (command == 'a')
+        xDriftComp -= 0.01;
+      if (command == 'A')
+        xDriftComp -= 0.01;
+
+
     if (command == 'S')
     {
       outputMode = OFF;
@@ -751,10 +742,10 @@ void parseInput()
       Serial.print("R\t");
       Serial.println(xDriftComp);
     }
-    else if (command == 's')
-    {
-      hush = !hush;
-    }
+//    else if (command == 's')
+//    {
+//      hush = !hush;
+//    }
     //    else if (command == 'F')
     //    {
     //      pushBias2DMP();

@@ -40,7 +40,7 @@ THE SOFTWARE.
 ===============================================
 */
 
-#define POLLMPU
+//#define POLLMPU
 
 #define EMPL_TARGET_ATMEGA328
 
